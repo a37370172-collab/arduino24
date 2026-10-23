@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아두이노 신호등 배선 및 코드 정리</title>
+<style>
+  :root { color-scheme: light; --ink:#1f2937; --muted:#64748b; --line:#dbe3ee; --bg:#f4f7fb; --blue:#2563eb; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif; background:var(--bg); color:var(--ink); line-height:1.65; }
+  header { background:linear-gradient(135deg,#172554,#2563eb); color:white; padding:36px 20px; }
+  header .wrap, main { max-width:980px; margin:0 auto; }
+  h1 { margin:0 0 8px; font-size:clamp(1.7rem,4vw,2.4rem); line-height:1.25; }
+  header p { margin:0; color:#dbeafe; }
+  main { padding:24px 16px 48px; }
+  section { background:white; border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:18px; box-shadow:0 5px 18px rgba(15,23,42,.04); }
+  h2 { margin:0 0 14px; font-size:1.3rem; }
+  h3 { margin:18px 0 8px; font-size:1.05rem; }
+  p { margin:8px 0; }
+  .note { background:#eff6ff; border-left:4px solid var(--blue); padding:12px 14px; border-radius:8px; }
+  .warning { background:#fff7ed; border-left:4px solid #f97316; padding:12px 14px; border-radius:8px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; }
+  th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { background:#f8fafc; }
+  code { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; background:#eef2ff; padding:2px 5px; border-radius:5px; }
+  pre { margin:0; overflow:auto; background:#0b1220; color:#e5edf8; border-radius:12px; padding:18px; font-size:.9rem; line-height:1.55; }
+  pre code { padding:0; background:transparent; color:inherit; }
+  .steps { padding-left:22px; }
+  .pill { display:inline-block; border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; border-radius:999px; padding:3px 9px; margin:2px 4px 2px 0; font-size:.85rem; }
+  footer { text-align:center; color:var(--muted); padding:8px 16px 30px; font-size:.9rem; }
+  @media (max-width:600px) { section { padding:17px; } th,td { padding:8px; font-size:.92rem; } }
+  @media print { body { background:white; } header { background:#172554 !important; print-color-adjust:exact; } section { box-shadow:none; break-inside:avoid; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>아두이노 신호등 프로젝트</h1>
+    <p>2026년 10월 23일 수업 정리 · 배선 정보와 Arduino 코드 명령어</p>
+  </div>
+</header>
+<main>
+  <section>
+    <h2>1. 프로젝트 동작 요약</h2>
+    <p>처음에는 초록 LED가 켜집니다. 버튼을 누르면 초록불이 꺼지고, 노란불이 3초, 빨간불이 10초 켜진 뒤 초록불로 돌아옵니다.</p>
+    <p><span class="pill">초록불 시작</span> → <span class="pill">노란불 3초</span> → <span class="pill">빨간불 10초</span> → <span class="pill">초록불 복귀</span></p>
+    <div class="note"><strong>사용 핀:</strong> 초록 LED D11 · 노란 LED D10 · 빨간 LED D9 · 버튼 D8</div>
+  </section>
+
+  <section>
+    <h2>2. 준비물</h2>
+    <ul>
+      <li>Arduino Uno (또는 호환 보드)와 USB 케이블</li>
+      <li>브레드보드와 점퍼선</li>
+      <li>초록·노란·빨간 LED 각 1개</li>
+      <li>LED용 저항 3개 (각 220Ω~330Ω 권장)</li>
+      <li>푸시 버튼 1개</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. 배선 연결표</h2>
+    <table>
+      <thead><tr><th>부품</th><th>연결 방법</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>초록 LED</td><td>D11 → 저항(220Ω~330Ω) → LED 긴 다리(+)<br>LED 짧은 다리(-) → GND</td><td>시작할 때 켜짐</td></tr>
+        <tr><td>노란 LED</td><td>D10 → 저항(220Ω~330Ω) → LED 긴 다리(+)<br>LED 짧은 다리(-) → GND</td><td>버튼 입력 후 3초 켜짐</td></tr>
+        <tr><td>빨간 LED</td><td>D9 → 저항(220Ω~330Ω) → LED 긴 다리(+)<br>LED 짧은 다리(-) → GND</td><td>노란불 다음 10초 켜짐</td></tr>
+        <tr><td>푸시 버튼</td><td>한쪽 다리 → D8<br>반대쪽 다리 → GND</td><td><code>INPUT_PULLUP</code> 사용</td></tr>
+        <tr><td>공통 접지</td><td>Arduino GND → 브레드보드 GND 레일</td><td>LED 음극과 버튼 GND가 공통으로 연결됨</td></tr>
+      </tbody>
+    </table>
+    <div class="warning"><strong>주의:</strong> LED마다 저항을 하나씩 연결하세요. 버튼은 <code>INPUT_PULLUP</code> 설정이므로 D8과 GND 사이에 연결하며, 누르지 않았을 때는 HIGH, 눌렀을 때는 LOW로 읽힙니다.</div>
+  </section>
+
+  <section>
+    <h2>4. 전체 Arduino 코드</h2>
+    <pre><code>int G = 11;
+int Y = 10;
+int R = 9;
+int button = 8;
+
+void setup() {
+  pinMode(G, OUTPUT);
+  pinMode(Y, OUTPUT);
+  pinMode(R, OUTPUT);
+  pinMode(button, INPUT_PULLUP);
+
+  // 처음에는 초록색
+  digitalWrite(G, HIGH);
+  digitalWrite(Y, LOW);
+  digitalWrite(R, LOW);
+}
+
+void loop() {
+  if (digitalRead(button) == LOW) {
+    delay(50);
+
+    if (digitalRead(button) == LOW) {
+      // 초록색 끄기
+      digitalWrite(G, LOW);
+
+      // 노란색 3초
+      digitalWrite(Y, HIGH);
+      delay(3000);
+      digitalWrite(Y, LOW);
+
+      // 빨간색 10초
+      digitalWrite(R, HIGH);
+      delay(10000);
+      digitalWrite(R, LOW);
+
+      // 초록색 다시 켜기
+      digitalWrite(G, HIGH);
+
+      // 버튼에서 손을 뗄 때까지 대기
+      while (digitalRead(button) == LOW) {
+        delay(10);
+      }
+    }
+  }
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>5. 주요 명령어 정리</h2>
+    <table>
+      <thead><tr><th>명령어</th><th>뜻</th><th>이 코드에서의 용도</th></tr></thead>
+      <tbody>
+        <tr><td><code>int</code></td><td>정수형 변수를 선언</td><td>핀 번호를 G, Y, R, button에 저장</td></tr>
+        <tr><td><code>pinMode(pin, OUTPUT)</code></td><td>핀을 출력으로 설정</td><td>LED를 제어</td></tr>
+        <tr><td><code>pinMode(pin, INPUT_PULLUP)</code></td><td>내부 풀업 저항을 사용해 입력으로 설정</td><td>버튼 상태를 읽음</td></tr>
+        <tr><td><code>digitalWrite(pin, HIGH)</code></td><td>디지털 출력 HIGH</td><td>LED 켜기</td></tr>
+        <tr><td><code>digitalWrite(pin, LOW)</code></td><td>디지털 출력 LOW</td><td>LED 끄기</td></tr>
+        <tr><td><code>digitalRead(pin)</code></td><td>디지털 핀 상태 읽기</td><td>버튼이 눌렸는지 확인</td></tr>
+        <tr><td><code>if (...)</code></td><td>조건이 참일 때 코드 실행</td><td>버튼이 눌렸을 때 신호등 순서 실행</td></tr>
+        <tr><td><code>delay(3000)</code></td><td>3000밀리초, 즉 3초 대기</td><td>노란불 유지</td></tr>
+        <tr><td><code>delay(10000)</code></td><td>10000밀리초, 즉 10초 대기</td><td>빨간불 유지</td></tr>
+        <tr><td><code>while (...)</code></td><td>조건이 참인 동안 반복</td><td>버튼에서 손을 뗄 때까지 대기</td></tr>
+        <tr><td><code>setup()</code></td><td>전원이 켜지거나 리셋될 때 한 번 실행</td><td>핀 설정 및 초기 초록불 점등</td></tr>
+        <tr><td><code>loop()</code></td><td>계속 반복 실행</td><td>버튼 입력을 계속 확인</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>6. 작동 시간과 버튼 동작</h2>
+    <ul>
+      <li><strong>50ms 대기:</strong> 버튼 접점의 짧은 흔들림(바운스)을 줄이기 위한 간단한 디바운싱입니다.</li>
+      <li><strong>노란불 3초:</strong> <code>delay(3000)</code></li>
+      <li><strong>빨간불 10초:</strong> <code>delay(10000)</code></li>
+      <li><strong>버튼을 놓을 때까지 대기:</strong> 누르고 있는 버튼 때문에 신호등이 연속 실행되는 것을 방지합니다.</li>
+    </ul>
+    <div class="note">현재 코드는 <code>delay()</code>로 기다리는 동안 다른 버튼 입력을 처리하지 않습니다. 버튼을 누른 뒤 한 사이클이 끝나면 초록불로 돌아오며, 다시 버튼을 눌러 다음 사이클을 시작할 수 있습니다.</div>
+  </section>
+
+  <section>
+    <h2>7. 업로드 및 점검 순서</h2>
+    <ol class="steps">
+      <li>USB 케이블로 Arduino를 컴퓨터에 연결합니다.</li>
+      <li>Arduino IDE에서 보드 종류와 포트를 선택합니다.</li>
+      <li>위 코드를 새 스케치에 붙여 넣고 확인(컴파일)합니다.</li>
+      <li>업로드한 뒤 처음에 초록 LED가 켜지는지 확인합니다.</li>
+      <li>버튼을 눌러 노란불 3초, 빨간불 10초 후 초록불로 돌아오는지 확인합니다.</li>
+    </ol>
+    <div class="warning">전원을 연결하기 전에 LED 방향, 저항, GND 공통 연결을 확인하세요. LED가 켜지지 않으면 극성, 핀 번호, 브레드보드 연결 위치를 다시 점검합니다.</div>
+  </section>
+</main>
+<footer>아두이노 신호등 프로젝트 정리 · 브라우저에서 열어 보거나 인쇄/PDF로 저장할 수 있습니다.</footer>
+</body>
+</html>
